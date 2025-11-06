@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Param, Put } from '@nestjs/commo
 import { ProposalsService } from './proposals.service';
 
 class SetMembersDto {
-  memberIds: (number | string)[];
+  memberIds!: (number | string)[];
 }
 
 function normalizeMemberId(value: number | string, index: number): bigint {
