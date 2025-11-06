@@ -3,7 +3,7 @@ import { MembersService } from './members.service';
 import { IsOptional, IsString } from 'class-validator';
 
 class BulkMemberDto {
-  name: string;
+  name!: string;
   org_unit?: string;
 }
 class ListQuery {
