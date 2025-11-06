@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MPK — Dashboard & Bulk Add</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --line:#1f2937; --muted:#94a3b8; --text:#e5e7eb;
+    --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0a1222);color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;}
+  header{padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;
+    background:rgba(10,18,34,0.9);backdrop-filter: blur(10px);z-index:10;}
+  h1{margin:0;font-size:18px}
+  main{padding:20px;display:grid;gap:16px;grid-template-columns: 1.1fr 0.9fr}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .muted{color:var(--muted)} .small{font-size:12px}
+  .kpis{display:grid;grid-template-columns: repeat(5,minmax(120px,1fr));gap:10px}
+  .kpi{border:1px dashed var(--line);border-radius:10px;padding:10px}
+  .kpi .label{color:var(--muted);font-size:12px}
+  .kpi .val{font-size:22px;font-weight:800}
+  .list{display:grid;gap:8px;max-height:220px;overflow:auto}
+  .pill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);padding:8px 10px;border-radius:10px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+  input,select,textarea{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:8px;font-size:14px;outline:none}
+  .row{display:grid;grid-template-columns: 140px 1fr;gap:10px;align-items:center;margin:6px 0}
+  .grid{display:grid;gap:10px}
+  .btn{background:#0b1220;border:1px solid var(--line);padding:8px 12px;border-radius:8px;color:var(--text);cursor:pointer}
+  .btn.primary{border-color:#14532d;background:#0b2a18}
+  .btn.inline{padding:4px 8px;font-size:12px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tag{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+  .hr{border:0;border-top:1px dashed var(--line);margin:12px 0}
+  .sticky-actions{position:sticky;bottom:0;background:rgba(17,24,39,0.9);backdrop-filter:blur(6px);padding:8px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+  .search{display:flex;gap:8px}
+  .member-grid{display:grid;grid-template-columns: 24px 1fr 1fr;gap:8px;align-items:center}
+  .danger-pill{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.4)}
+</style>
+</head>
+<body>
+<header>
+  <div class="flex" style="justify-content:space-between;">
+    <h1>Dashboard MPK — Overview & Bulk Add Panitia</h1>
+    <span class="tag">Demo UI — Prototipe</span>
+  </div>
+  <div class="muted small">Ringkasan kesehatan proker + alat rekrut massal panitia + setelan bot Telegram</div>
+</header>
+
+<main>
+  <!-- LEFT: DASHBOARD -->
+  <section class="card">
+    <div class="kpis">
+      <div class="kpi"><div class="label">Total Proker</div><div id="kpiTotal" class="val">0</div></div>
+      <div class="kpi"><div class="label">Lulus</div><div id="kpiLulus" class="val ok">0</div></div>
+      <div class="kpi"><div class="label">Tidak Lulus Sementara</div><div id="kpiGagal" class="val danger">0</div></div>
+      <div class="kpi"><div class="label">Schedule Alerts</div><div id="kpiSched" class="val warn">0</div></div>
+      <div class="kpi"><div class="label">Overwork Alerts</div><div id="kpiOver" class="val warn">0</div></div>
+    </div>
+
+    <div class="two" style="margin-top:10px">
+      <div class="card" style="padding:10px">
+        <div class="flex" style="justify-content:space-between;align-items:center">
+          <strong>Proker Perlu Perhatian</strong>
+          <button class="btn inline" onclick="seedData()">Regenerasi Data</button>
+        </div>
+        <div id="needsAttention" class="list"></div>
+      </div>
+      <div class="card" style="padding:10px">
+        <strong>Notifikasi Terbaru</strong>
+        <div id="notifList" class="list"></div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <strong>Laporan Cepat</strong>
+    <div class="two">
+      <button class="btn" onclick="downloadCSV('rekap_proposal.csv', buildReportProposals())">Unduh Rekap Proposal (CSV)</button>
+      <button class="btn" onclick="downloadCSV('rekap_overwork.csv', buildReportOverwork())">Unduh Rekap Overwork (CSV)</button>
+    </div>
+  </section>
+
+  <!-- RIGHT: BULK ADD + BOT SETTINGS -->
+  <aside class="card">
+    <div style="margin-bottom:6px"><strong>Bulk Add Panitia ke Proposal</strong></div>
+    <div class="grid">
+      <div class="row"><label>Proposal</label><select id="proposalPick"></select></div>
+      <div class="two">
+        <div class="row"><label>Maks Proker</label>
+          <select id="maxProker"><option value="">(default)</option><option>1</option><option selected>2</option><option>3</option></select>
+        </div>
+        <div class="row"><label>Jeda (hari)</label><input id="cooldownDays" type="number" value="14" min="0"/></div>
+      </div>
+      <div class="search">
+        <input id="search" placeholder="Cari nama..."/>
+        <label class="small"><input id="hideConf" type="checkbox"/> Sembunyikan bentrok</label>
+        <label class="small"><input id="hideOver" type="checkbox"/> Sembunyikan overload</label>
+      </div>
+      <div class="grid" id="membersBox"></div>
+      <div class="sticky-actions">
+        <input id="overrideReason" placeholder="Alasan override (wajib bila melanggar)"/>
+        <button class="btn primary" onclick="bulkAdd()">Tambah yang Dipilih</button>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <div><strong>Bot Telegram (placeholder)</strong></div>
+    <div class="grid">
+      <div class="row"><label>Chat ID</label><input id="chatId" placeholder="@group_or_chatid"/></div>
+      <div class="row"><label>Pesan Uji</label><input id="testMsg" placeholder="Halo dari MPK Bot!"/></div>
+      <div class="flex"><button class="btn" onclick="fakeSend()">Kirim Tes</button><span id="sendStatus" class="muted small"></span></div>
+      <div class="small muted">Integrasi produksi akan memakai webhook Telegraf/NestJS. Ini hanya simulasi UI.</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+// ----- Simulasi Data -----
+let proposals = [];
+let members = [];
+let notifications = [];
+let assignments = []; // {proposalId, memberName, flags}
+const now = new Date();
+
+function seedData(){
+  proposals = [
+    {id:'p1', title:'Seminar Kepemimpinan', status:'LULUS', start:'2025-11-08T08:00', end:'2025-11-08T15:00', alerts:0},
+    {id:'p2', title:'Pelatihan Debate', status:'TIDAK LULUS', start:'2025-11-12T13:00', end:'2025-11-12T17:00', alerts:1},
+    {id:'p3', title:'Webinar Alumni', status:'LULUS', start:'2025-11-06T09:00', end:'2025-11-06T12:00', alerts:0},
+    {id:'p4', title:'Festival Kampus', status:'REVISI', start:'2025-12-03T07:00', end:'2025-12-03T20:00', alerts:2}
+  ];
+  members = [
+    {name:'Alya', max:2, active:[{title:'Seminar Kepemimpinan', start:'2025-11-08T08:00', end:'2025-11-08T15:00'}]},
+    {name:'Bima', max:1, active:[{title:'Pelatihan Debate', start:'2025-11-12T13:00', end:'2025-11-12T17:00'}]},
+    {name:'Citra', max:3, active:[
+      {title:'Webinar Alumni', start:'2025-11-06T09:00', end:'2025-11-06T12:00'},
+      {title:'Rapat Rutin', start:'2025-11-09T10:00', end:'2025-11-09T11:00'},
+      {title:'Festival Kampus', start:'2025-12-03T07:00', end:'2025-12-03T20:00'},
+    ]},
+    {name:'Dani', max:2, active:[]},
+    {name:'Eka', max:2, active:[{title:'Pelantikan', start:'2025-11-05T08:00', end:'2025-11-05T12:00'}]},
+  ];
+  assignments = [];
+  notifications = [
+    {type:'Proposal Alert', msg:'p2 nilai akhir < 70'},
+    {type:'Schedule Alert', msg:'Bentrok Bima pada p2'},
+    {type:'Overwork Alert', msg:'Citra melebihi batas (3/2) pada p4'}
+  ];
+  render();
+}
+
+function render(){
+  // KPIs
+  document.getElementById('kpiTotal').textContent = proposals.length;
+  document.getElementById('kpiLulus').textContent = proposals.filter(p=>p.status==='LULUS').length;
+  document.getElementById('kpiGagal').textContent = proposals.filter(p=>p.status==='TIDAK LULUS').length;
+  document.getElementById('kpiSched').textContent = proposals.reduce((a,p)=>a+(p.alerts||0),0);
+  document.getElementById('kpiOver').textContent = notifications.filter(n=>n.type==='Overwork Alert').length;
+
+  // Needs attention
+  const attention = document.getElementById('needsAttention');
+  attention.innerHTML='';
+  proposals.filter(p=>p.status!=='LULUS' || (p.alerts||0)>0).forEach(p=>{
+    const div = document.createElement('div');
+    div.className='pill';
+    const badge = (p.status==='TIDAK LULUS')? '<span class="danger">●</span>' : (p.status==='REVISI')? '<span class="warn">●</span>' : '<span>●</span>';
+    div.innerHTML = `${badge} <strong>${p.title}</strong><span class="muted small">${new Date(p.start).toLocaleDateString()} </span><span class="tag">${p.status}</span><span class="tag">Alerts: ${p.alerts||0}</span>`;
+    attention.appendChild(div);
+  });
+
+  // Notifs
+  const nl = document.getElementById('notifList');
+  nl.innerHTML='';
+  notifications.slice(-8).reverse().forEach(n=>{
+    const div = document.createElement('div');
+    div.className='pill';
+    div.innerHTML = `<strong>${n.type}</strong><span class="muted small">${new Date().toLocaleString()}</span><span>${n.msg}</span>`;
+    nl.appendChild(div);
+  });
+
+  // Proposal pick
+  const pick = document.getElementById('proposalPick');
+  pick.innerHTML='';
+  proposals.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value=p.id;
+    opt.textContent = `${p.title} — ${new Date(p.start).toLocaleDateString()}`;
+    pick.appendChild(opt);
+  });
+
+  renderMembersBox();
+}
+
+function parseISO(s){ return new Date(s); }
+function overlap(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart < aEnd; }
+function daysBetween(a,b){ return Math.round((b - a)/(1000*60*60*24)); }
+
+function renderMembersBox(){
+  const box = document.getElementById('membersBox');
+  box.innerHTML='';
+  const q = document.getElementById('search').value.toLowerCase();
+  const hideC = document.getElementById('hideConf').checked;
+  const hideO = document.getElementById('hideOver').checked;
+  const maxOverride = document.getElementById('maxProker').value;
+  const cooldown = Number(document.getElementById('cooldownDays').value||0);
+  const p = proposals.find(x=>x.id===document.getElementById('proposalPick').value) || proposals[0];
+  const start = parseISO(p.start), end = parseISO(p.end);
+
+  // header
+  const hdr = document.createElement('div');
+  hdr.className='member-grid muted small';
+  hdr.innerHTML = '<div></div><div>Nama</div><div>Status</div>';
+  box.appendChild(hdr);
+
+  members.forEach(m=>{
+    if(q && !m.name.toLowerCase().includes(q)) return;
+    const activeCount = m.active.filter(a=> parseISO(a.end) >= now).length;
+    const maxAllowed = maxOverride? Number(maxOverride) : (m.max ?? Infinity);
+    const hasConflict = m.active.some(a=> overlap(start,end,parseISO(a.start),parseISO(a.end)));
+    const lastEnd = m.active.length? parseISO(m.active.map(a=>a.end).sort().slice(-1)[0]) : null;
+    const violatesCooldown = lastEnd? (daysBetween(lastEnd,start) < cooldown) : false;
+    const willOverload = activeCount >= maxAllowed;
+
+    if((hideC && (hasConflict || violatesCooldown)) || (hideO && willOverload)) return;
+
+    const row = document.createElement('label');
+    row.className='member-grid pill' + ((hasConflict||violatesCooldown||willOverload)?' danger-pill':'');
+    row.innerHTML = `
+      <input type="checkbox" data-name="${m.name}"/>
+      <div><strong>${m.name}</strong><div class="small muted">aktif:${activeCount}/${maxAllowed}</div></div>
+      <div class="small">
+        ${hasConflict?'⚠️ Bentrok • ':''}
+        ${violatesCooldown?'⏱️ Jeda<'+cooldown+'h • ':''}
+        ${willOverload?'🧨 Overwork':''}
+      </div>
+    `;
+    box.appendChild(row);
+  });
+}
+
+function bulkAdd(){
+  const checked = [...document.querySelectorAll('#membersBox input[type=checkbox]:checked')];
+  if(checked.length===0) { alert('Pilih minimal satu panitia.'); return; }
+  const p = proposals.find(x=>x.id===document.getElementById('proposalPick').value) || proposals[0];
+  const start = parseISO(p.start), end = parseISO(p.end);
+  const maxOverride = document.getElementById('maxProker').value;
+  const cooldown = Number(document.getElementById('cooldownDays').value||0);
+  const overrideReason = document.getElementById('overrideReason').value.trim();
+
+  let blocked = 0, forced = 0;
+  checked.forEach(cb=>{
+    const name = cb.getAttribute('data-name');
+    const m = members.find(x=>x.name===name);
+    const activeCount = m.active.filter(a=> parseISO(a.end) >= now).length;
+    const maxAllowed = maxOverride? Number(maxOverride) : (m.max ?? Infinity);
+    const hasConflict = m.active.some(a=> overlap(start,end,parseISO(a.start),parseISO(a.end)));
+    const lastEnd = m.active.length? parseISO(m.active.map(a=>a.end).sort().slice(-1)[0]) : null;
+    const violatesCooldown = lastEnd? (daysBetween(lastEnd,start) < cooldown) : false;
+    const willOverload = activeCount >= maxAllowed;
+
+    const violates = hasConflict||violatesCooldown||willOverload;
+    if(violates && !overrideReason){
+      blocked++;
+      return;
+    }
+    assignments.push({proposalId:p.id, memberName:name, flags:{hasConflict,violatesCooldown,willOverload}});
+    if(violates && overrideReason){
+      forced++;
+      notifications.push({type: hasConflict?'Schedule Alert':'Overwork Alert', msg:`Override: ${name} pada ${p.title}`});
+    }
+  });
+
+  if(blocked>0 && !overrideReason){
+    alert(`Simpan diblokir untuk ${blocked} orang. Isi "Alasan override" untuk memaksa.`);
+  } else {
+    alert(`Berhasil menambahkan ${checked.length - blocked} panitia${forced?` (override: ${forced})`:''}.`);
+  }
+  render();
+}
+
+function buildReportProposals(){
+  const rows = [['proposal_id','title','status','start','end','alerts']];
+  proposals.forEach(p=> rows.push([p.id,p.title,p.status,p.start,p.end,String(p.alerts||0)]));
+  return rows;
+}
+function buildReportOverwork(){
+  const rows = [['member','issue','proposal']];
+  assignments.filter(a=>a.flags.willOverload||a.flags.hasConflict||a.flags.violatesCooldown).forEach(a=>{
+    const p = proposals.find(x=>x.id===a.proposalId);
+    const issue = [
+      a.flags.hasConflict?'Bentrok':'',
+      a.flags.violatesCooldown?'Jeda':'',
+      a.flags.willOverload?'Overwork':''
+    ].filter(Boolean).join('|');
+    rows.push([a.memberName, issue, p?p.title:'-']);
+  });
+  return rows;
+}
+function downloadCSV(filename, rows){
+  const csv = rows.map(r=> r.map(x=> `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function fakeSend(){
+  const chatId = document.getElementById('chatId').value || '(kosong)';
+  const msg = document.getElementById('testMsg').value || '';
+  document.getElementById('sendStatus').textContent = `✓ Terkirim (simulasi) ke ${chatId}: "${msg}"`;
+}
+
+document.getElementById('search').addEventListener('input',renderMembersBox);
+document.getElementById('hideConf').addEventListener('change',renderMembersBox);
+document.getElementById('hideOver').addEventListener('change',renderMembersBox);
+document.getElementById('maxProker').addEventListener('change',renderMembersBox);
+document.getElementById('cooldownDays').addEventListener('input',renderMembersBox);
+document.getElementById('proposalPick').addEventListener('change',renderMembersBox);
+
+seedData();
+</script>
+</body>
+</html>

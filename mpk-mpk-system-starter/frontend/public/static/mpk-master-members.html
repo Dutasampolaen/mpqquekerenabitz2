@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MPK — Master Anggota & Seleksi Proposal (Min 3 MPK)</title>
+<style>
+  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--muted:#94a3b8;--text:#e5e7eb;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0a1222);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+  header{padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,18,34,0.9);backdrop-filter:blur(10px)}
+  h1{margin:0;font-size:18px}
+  main{padding:18px;display:grid;gap:16px;grid-template-columns: 1.1fr 0.9fr}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .small{font-size:12px} .muted{color:var(--muted)}
+  .row{display:grid;grid-template-columns: 160px 1fr;gap:10px;align-items:center;margin:6px 0}
+  textarea,input,select{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px;font-size:14px}
+  .btn{background:#0b1220;border:1px solid var(--line);padding:8px 12px;border-radius:8px;color:var(--text);cursor:pointer}
+  .btn.primary{border-color:#14532d;background:#0b2a18}
+  .btn.ghost{background:transparent}
+  .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tag{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+  .grid{display:grid;gap:10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+  .list{display:grid;gap:8px;max-height:260px;overflow:auto}
+  .pill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+  .sticky{position:sticky;bottom:0;background:rgba(17,24,39,0.9);border-top:1px solid var(--line);backdrop-filter:blur(6px);padding:8px;display:flex;justify-content:flex-end;gap:8px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .col{display:grid;gap:10px}
+  .hint{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="flex" style="justify-content:space-between">
+    <h1>Master Anggota MPK & Seleksi Panitia Proposal</h1>
+    <span class="tag">Demo UI — Prototipe</span>
+  </div>
+  <div class="muted small">A) Masukkan seluruh anggota ke database (Nama + Bidang bebas). B) Saat memilih panitia proposal, ambil dari database. Notis: <b>wajib ≥ 3 anggota MPK per proposal</b>.</div>
+</header>
+
+<main>
+  <!-- LEFT: MASTER MEMBERS -->
+  <section class="card">
+    <strong>Master Anggota — Bulk Import</strong>
+    <div class="hint">Format fleksibel per baris: <code>Nama, Bidang</code> atau <code>Nama | Bidang</code>. Contoh: <i>Alya, Komisi A</i> / <i>Bima | Sekbid 1</i>.</div>
+    <div class="row"><label>Input Massal</label>
+      <textarea id="bulk" rows="8" placeholder="Alya, Komisi A
+Bima, Sekbid 1
+Citra | Komisi B
+Dani, Komisi A
+Eka | Sekbid 3"></textarea>
+    </div>
+    <div class="flex">
+      <input type="file" id="csv" accept=".csv,text/csv" class="btn"/>
+      <button class="btn" onclick="parseBulk()">Parse</button>
+      <span id="stats" class="muted small"></span>
+    </div>
+    <div style="max-height:260px;overflow:auto;margin-top:8px">
+      <table id="preview"><thead></thead><tbody></tbody></table>
+    </div>
+    <div class="sticky">
+      <button class="btn primary" onclick="commitMembers()">Tambahkan ke Database</button>
+    </div>
+
+    <div class="two" style="margin-top:12px">
+      <div class="col">
+        <strong>Database Anggota</strong>
+        <div id="dbCount" class="muted small"></div>
+        <div id="memberDb" class="list"></div>
+      </div>
+      <div class="col">
+        <strong>Filter</strong>
+        <div class="row"><label>Cari Nama</label><input id="qName" placeholder="ketik nama..."/></div>
+        <div class="row"><label>Bidang</label><input id="qBidang" placeholder="contoh: Komisi A / Sekbid 1"/></div>
+        <button class="btn" onclick="renderDb()">Terapkan Filter</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: SELECT FOR PROPOSAL -->
+  <aside class="card">
+    <strong>Pilih Panitia dari Database</strong>
+    <div class="row"><label>Proposal</label>
+      <select id="proposalPick"></select>
+    </div>
+    <div class="row"><label>Cari Nama</label><input id="sName" placeholder="ketik nama..."/></div>
+    <div class="row"><label>Bidang</label><input id="sBidang" placeholder="komisi / sekbid..."/></div>
+    <div class="flex">
+      <button class="btn" onclick="renderSelector()">Terapkan Filter</button>
+      <span id="selInfo" class="hint"></span>
+    </div>
+    <div id="selector" class="list" style="margin-top:8px"></div>
+    <div class="sticky">
+      <span id="minRule" class="warn" style="margin-right:auto">Notis: Proposal wajib ≥ 3 anggota MPK.</span>
+      <button class="btn primary" id="saveBtn" disabled onclick="saveSelection()">Simpan Panitia</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <strong>Panitia Terpilih</strong>
+      <div id="chosen" class="list" style="margin-top:6px"></div>
+    </div>
+  </aside>
+</main>
+
+<script>
+// ---- Simulasi DB ----
+let members = [
+  {id:'m1', name:'Alya', org_unit:'Komisi A'},
+  {id:'m2', name:'Bima', org_unit:'Sekbid 1'},
+  {id:'m3', name:'Citra', org_unit:'Komisi B'},
+];
+let proposals = [
+  {id:'p1', title:'Seminar Kepemimpinan'},
+  {id:'p2', title:'Pelatihan Debate'}
+];
+let proposalMembers = {}; // proposalId -> [memberId]
+
+// ---- Bulk Import ----
+let parsed = [];
+function parseLine(s){
+  const parts = s.split(/[,\|\t;]+/).map(x=>x.trim()).filter(Boolean);
+  const name = parts[0] || '';
+  const org = (parts[1] || '').replace(/\s+/g,' ').trim(); // bidang bebas
+  return {name, org_unit: org};
+}
+function parseBulk(){
+  const ta = document.getElementById('bulk').value||'';
+  parsed = ta.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(parseLine);
+  // dedupe vs DB (by normalized name)
+  const norm = (x)=>x.toLowerCase().replace(/\s+/g,'');
+  const existing = new Set(members.map(m=>norm(m.name)));
+  parsed = parsed.map((r,i)=>({...r, _status: existing.has(norm(r.name)) ? 'Ada' : 'Baru'}));
+  // render table
+  const thead = document.querySelector('#preview thead');
+  const tbody = document.querySelector('#preview tbody');
+  thead.innerHTML = '<tr><th>#</th><th>Nama</th><th>Bidang (Org Unit)</th><th>Status</th></tr>';
+  tbody.innerHTML = '';
+  parsed.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td contenteditable="true" oninput="editParsed(${i},'name',this.textContent)">${r.name}</td>
+      <td contenteditable="true" oninput="editParsed(${i},'org_unit',this.textContent)">${r.org_unit}</td>
+      <td>${r._status==='Ada'?'<span class="ok">Ada</span>':'<span class="danger">Baru</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('stats').textContent = `Baris: ${parsed.length} • Baru: ${parsed.filter(x=>x._status==='Baru').length} • Ada: ${parsed.filter(x=>x._status==='Ada').length}`;
+}
+document.getElementById('csv').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ document.getElementById('bulk').value = reader.result; parseBulk(); };
+  reader.readAsText(f);
+});
+function editParsed(i,k,v){ parsed[i][k] = (v||'').trim(); }
+function commitMembers(){
+  if(parsed.length===0){ alert('Tidak ada data.'); return; }
+  const norm = (x)=>x.toLowerCase().replace(/\s+/g,'');
+  const existing = new Set(members.map(m=>norm(m.name)));
+  let added = 0;
+  parsed.forEach(r=>{
+    if(!r.name) return;
+    if(existing.has(norm(r.name))) return; // skip duplicate-by-name
+    members.push({id:'m'+(members.length+1), name:r.name, org_unit:r.org_unit||''});
+    added++;
+  });
+  alert(`Ditambahkan: ${added} anggota ke database.`);
+  parsed = [];
+  document.getElementById('bulk').value='';
+  document.querySelector('#preview thead').innerHTML='';
+  document.querySelector('#preview tbody').innerHTML='';
+  document.getElementById('stats').textContent='';
+  renderDb(); renderSelector();
+}
+
+// ---- Render Database List + Filter ----
+function renderDb(){
+  const qn = (document.getElementById('qName').value||'').toLowerCase();
+  const qb = (document.getElementById('qBidang').value||'').toLowerCase();
+  const box = document.getElementById('memberDb');
+  box.innerHTML='';
+  const out = members.filter(m=>
+    (!qn || m.name.toLowerCase().includes(qn)) &&
+    (!qb || (m.org_unit||'').toLowerCase().includes(qb))
+  );
+  document.getElementById('dbCount').textContent = `Total anggota: ${members.length} • Tampil: ${out.length}`;
+  out.forEach(m=>{
+    const div = document.createElement('div');
+    div.className='pill';
+    div.innerHTML = `<strong>${m.name}</strong><span class="tag">${m.org_unit||'-'}</span>`;
+    box.appendChild(div);
+  });
+}
+
+// ---- Selector for Proposal ----
+let selected = new Set();
+function init(){
+  // proposal dropdown
+  const pick = document.getElementById('proposalPick');
+  proposals.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.title;
+    pick.appendChild(opt);
+  });
+  pick.addEventListener('change', ()=>{ loadChosen(); renderSelector(); });
+  loadChosen();
+  renderDb();
+  renderSelector();
+  updateMinRule();
+}
+function loadChosen(){
+  const pid = document.getElementById('proposalPick').value || proposals[0].id;
+  selected = new Set(proposalMembers[pid] || []);
+  renderChosen();
+}
+function renderSelector(){
+  const qn = (document.getElementById('sName').value||'').toLowerCase();
+  const qb = (document.getElementById('sBidang').value||'').toLowerCase();
+  const box = document.getElementById('selector');
+  box.innerHTML='';
+  const out = members.filter(m=>
+    (!qn || m.name.toLowerCase().includes(qn)) &&
+    (!qb || (m.org_unit||'').toLowerCase().includes(qb))
+  );
+  document.getElementById('selInfo').textContent = `Menampilkan ${out.length} dari ${members.length} anggota.`;
+  out.forEach(m=>{
+    const label = document.createElement('label');
+    label.className='pill';
+    label.innerHTML = `<input type="checkbox" ${selected.has(m.id)?'checked':''} data-id="${m.id}"/> <strong>${m.name}</strong><span class="tag">${m.org_unit||'-'}</span>`;
+    box.appendChild(label);
+  });
+  box.querySelectorAll('input[type=checkbox]').forEach(cb=> cb.addEventListener('change', onToggle));
+  updateMinRule();
+}
+function onToggle(e){
+  const id = e.target.getAttribute('data-id');
+  if(e.target.checked) selected.add(id); else selected.delete(id);
+  updateMinRule(); renderChosen();
+}
+function renderChosen(){
+  const pid = document.getElementById('proposalPick').value || proposals[0].id;
+  const box = document.getElementById('chosen');
+  box.innerHTML='';
+  const ids = Array.from(selected);
+  ids.forEach(id=>{
+    const m = members.find(x=>x.id===id);
+    const div = document.createElement('div');
+    div.className='pill';
+    div.innerHTML = `<strong>${m.name}</strong><span class="tag">${m.org_unit||'-'}</span>
+      <button class="btn ghost" onclick="removeSel('${id}')">Hapus</button>`;
+    box.appendChild(div);
+  });
+}
+function removeSel(id){
+  selected.delete(id); renderChosen(); renderSelector(); updateMinRule();
+}
+function updateMinRule(){
+  const count = selected.size;
+  const btn = document.getElementById('saveBtn');
+  const notice = document.getElementById('minRule');
+  if(count >= 3){
+    notice.textContent = `Siap simpan: ${count} anggota (memenuhi ≥ 3).`;
+    notice.className = 'ok';
+    btn.disabled = false;
+  } else {
+    notice.textContent = `Notis: Proposal wajib ≥ 3 anggota MPK. Saat ini: ${count}.`;
+    notice.className = 'warn';
+    btn.disabled = true;
+  }
+}
+function saveSelection(){
+  const pid = document.getElementById('proposalPick').value || proposals[0].id;
+  const ids = Array.from(selected);
+  if(ids.length < 3){
+    alert('Gagal simpan: minimal 3 anggota MPK.');
+    return;
+  }
+  proposalMembers[pid] = ids;
+  alert(`Tersimpan: ${ids.length} anggota untuk proposal.`);
+}
+
+init();
+</script>
+</body>
+</html>

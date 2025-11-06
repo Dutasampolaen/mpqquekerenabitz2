@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MPK — Evaluasi & Distribusi Proker (Komisi A)</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#111827;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --accent:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --ok:#10b981;
+      --line:#1f2937;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:linear-gradient(180deg,#0b1220,#0a1222);
+      color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+      line-height:1.45;
+    }
+    header{
+      padding:24px 20px;border-bottom:1px solid var(--line);
+      position:sticky;top:0;background:rgba(10,18,34,0.9);backdrop-filter: blur(10px);z-index:10;
+    }
+    h1{margin:0;font-size:20px;font-weight:700}
+    main{padding:20px;display:grid;gap:18px;grid-template-columns: 1.1fr 0.9fr}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+    .grid{display:grid;gap:12px}
+    .row{display:grid;grid-template-columns: 140px 1fr;gap:10px;align-items:center}
+    .row label{color:var(--muted);font-size:13px}
+    input,select,textarea{
+      width:100%;background:#0b1220;border:1px solid var(--line);color:var(--text);
+      border-radius:10px;padding:10px;font-size:14px;outline:none;
+    }
+    input[type="range"]{padding:0}
+    .muted{color:var(--muted)}
+    .list{display:grid;gap:8px;max-height:300px;overflow:auto}
+    .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);padding:8px 10px;border-radius:10px}
+    .status{font-weight:700}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+    .kpi{display:flex;gap:12px;flex-wrap:wrap}
+    .kpi .box{flex:1 1 150px;border:1px dashed var(--line);border-radius:10px;padding:10px}
+    .kpi .value{font-size:20px;font-weight:800}
+    .section-title{margin:6px 0 10px;font-size:14px;color:#cbd5e1;font-weight:700}
+    .items{display:grid;grid-template-columns: 1fr;gap:10px;max-height:470px;overflow:auto;padding-right:4px}
+    .item{display:grid;grid-template-columns: 36px 1fr 120px 80px;gap:8px;align-items:center;border-bottom:1px dashed var(--line);padding-bottom:8px}
+    .item .no{color:var(--muted);font-size:12px}
+    .item output{display:inline-block;text-align:center;font-variant-numeric:tabular-nums}
+    .score{font-weight:700}
+    .tag{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+    .warnings{display:grid;gap:6px}
+    .warn-row{display:flex;align-items:center;gap:8px}
+    .warn-row .icon{font-size:16px}
+    .calendar{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .calendar header{display:flex;justify-content:space-between;align-items:center;background:#0b1220;padding:10px;border-bottom:1px solid var(--line);position:static;backdrop-filter:none}
+    .calendar table{width:100%;border-collapse:collapse}
+    .calendar th,.calendar td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:8px;vertical-align:top}
+    .calendar th:last-child,.calendar td:last-child{border-right:none}
+    .calendar .event{display:block;margin:4px 0;padding:4px 6px;border-radius:6px;background:#0e2a1c}
+    .small{font-size:12px}
+    .btn{background:#0b1220;border:1px solid var(--line);padding:8px 12px;border-radius:8px;color:var(--text);cursor:pointer}
+    .btn.primary{border-color:#14532d;background:#0b2a18}
+    .two-col{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
+    .footer{padding:16px 20px;border-top:1px solid var(--line);color:var(--muted)}
+    .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .right{justify-content:flex-end}
+    .inline{display:inline-flex;gap:8px;align-items:center}
+    details{border:1px solid var(--line);border-radius:10px;padding:8px}
+    summary{cursor:pointer}
+    .sr-only{position:absolute;left:-9999px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="flex right small">
+      <span class="tag">Demo UI — Prototipe</span>
+    </div>
+    <h1>MPK — Sistem Evaluasi & Distribusi Proker (Komisi A)</h1>
+    <div class="muted small">Kelulusan ≥ 70 • Skor 0–100 • Penalti Revisi • Jadwal Anti-Bentrok • Overwork Guard</div>
+  </header>
+  <main>
+    <section class="card">
+      <div class="section-title">Header Proposal</div>
+      <div class="grid">
+        <div class="row"><label>Judul</label><input id="title" placeholder="Judul Proker"/></div>
+        <div class="row"><label>Divisi</label>
+          <select id="division">
+            <option>Akademik</option><option>Non-Akademik</option><option>Humas</option><option>Keuangan</option>
+          </select>
+        </div>
+        <div class="row"><label>Pengunggah</label><input id="uploader" placeholder="Nama pengunggah"/></div>
+        <div class="two-col">
+          <div class="row"><label>Revisi ke-</label>
+            <input id="revision" type="number" value="1" min="1" step="1"/>
+          </div>
+          <div class="row"><label>Alasan Override</label><input id="overrideReason" placeholder="Wajib diisi jika melanggar aturan"/></div>
+        </div>
+        <div class="two-col">
+          <div class="row"><label>Tgl Mulai</label><input id="startDate" type="date"/></div>
+          <div class="row"><label>Waktu Mulai</label><input id="startTime" type="time"/></div>
+        </div>
+        <div class="two-col">
+          <div class="row"><label>Tgl Selesai</label><input id="endDate" type="date"/></div>
+          <div class="row"><label>Waktu Selesai</label><input id="endTime" type="time"/></div>
+        </div>
+        <div class="row"><label>Lokasi</label><input id="location" placeholder="Lokasi kegiatan"/></div>
+        <div class="two-col">
+          <div class="row"><label>Tautan</label><input id="link" placeholder="https://..."/></div>
+          <div class="row"><label>Upload</label><input id="file" type="file"/></div>
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px dashed var(--line);margin:16px 0"/>
+
+      <div class="section-title">Penilaian (27 Butir)</div>
+      <div class="items" id="items"></div>
+
+      <div class="section-title">Panel Panitia</div>
+      <div class="grid">
+        <div class="two-col">
+          <div class="row"><label>Maksimal Proker</label>
+            <select id="maxProker">
+              <option value="">(Tidak di-set)</option>
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+            </select>
+          </div>
+          <div class="row"><label>Jeda (hari)</label><input id="cooldownDays" type="number" value="14" min="0"/></div>
+        </div>
+        <div class="flex">
+          <label class="inline small"><input id="hideConflicts" type="checkbox"/> Sembunyikan yang bentrok</label>
+          <label class="inline small"><input id="hideOverload" type="checkbox"/> Sembunyikan yang overload</label>
+        </div>
+        <div class="row">
+          <label>Tambah Panitia</label>
+          <select id="memberSelect"></select>
+        </div>
+        <div class="flex">
+          <button class="btn" onclick="addSelectedMember()">Tambah</button>
+          <button class="btn" onclick="recalc()">Rehitung</button>
+        </div>
+        <div class="list" id="memberList"></div>
+      </div>
+    </section>
+
+    <aside class="card">
+      <div class="section-title">Ringkasan & Status</div>
+      <div class="kpi">
+        <div class="box">
+          <div class="muted small">Total Skor (Rata-rata)</div>
+          <div id="totalScore" class="value">0.00</div>
+        </div>
+        <div class="box">
+          <div class="muted small">Penalti Revisi</div>
+          <div id="penalty" class="value">0</div>
+        </div>
+        <div class="box">
+          <div class="muted small">Nilai Akhir</div>
+          <div id="finalScore" class="value">0.00</div>
+        </div>
+        <div class="box">
+          <div class="muted small">Status</div>
+          <div id="status" class="value">-</div>
+        </div>
+      </div>
+
+      <div class="section-title">Peringatan</div>
+      <div id="warnings" class="warnings muted small"></div>
+
+      <hr style="border:0;border-top:1px dashed var(--line);margin:16px 0"/>
+
+      <div class="section-title">Kalender (Mingguan)</div>
+      <div class="calendar" id="calendar">
+        <header>
+          <button class="btn" onclick="shiftWeek(-1)">◀</button>
+          <div class="muted">Minggu <span id="weekLabel"></span></div>
+          <button class="btn" onclick="shiftWeek(1)">▶</button>
+        </header>
+        <table>
+          <thead><tr id="calHead"></tr></thead>
+          <tbody id="calBody"></tbody>
+        </table>
+      </div>
+
+      <details style="margin-top:12px">
+        <summary>Notifikasi Sistem (simulasi)</summary>
+        <div id="notifList" class="list"></div>
+      </details>
+    </aside>
+  </main>
+
+  <footer class="footer small">
+    Prototipe UI ini mencontohkan logika inti: evaluasi 27 butir, penalti revisi, anti-bentrok jadwal, dan pembatasan beban panitia.
+  </footer>
+
+<script>
+// ---- Data simulasi ----
+const now = new Date();
+const sampleMembers = [
+  { name:'Alya', max:2, assignments:[
+    { title:'Seminar Kepemimpinan', start:'2025-11-08T08:00', end:'2025-11-08T15:00', location:'Aula' },
+    { title:'Bakti Sosial', start:'2025-11-20T09:00', end:'2025-11-20T17:00', location:'Lapangan' },
+  ]},
+  { name:'Bima', max:1, assignments:[
+    { title:'Pelatihan Debate', start:'2025-11-12T13:00', end:'2025-11-12T17:00', location:'Ruang 2' }
+  ]},
+  { name:'Citra', max:3, assignments:[
+    { title:'Webinar Alumni', start:'2025-11-06T09:00', end:'2025-11-06T12:00', location:'Online' },
+    { title:'Rapat Rutin', start:'2025-11-09T10:00', end:'2025-11-09T11:00', location:'Ruang B' },
+    { title:'Festival Kampus', start:'2025-12-03T07:00', end:'2025-12-03T20:00', location:'Lapangan' },
+  ]},
+  { name:'Dani', max:2, assignments:[] },
+  { name:'Eka', max:2, assignments:[
+    { title:'Pelantikan', start:'2025-11-05T08:00', end:'2025-11-05T12:00', location:'Aula' },
+  ]},
+];
+
+// ---- Helpers ----
+const fmt2 = (n)=> Number(n).toFixed(2);
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+function parseLocalDate(dateStr,timeStr){
+  if(!dateStr||!timeStr) return null;
+  return new Date(dateStr+'T'+timeStr);
+}
+function overlap(aStart,aEnd,bStart,bEnd){
+  return aStart < bEnd && bStart < aEnd;
+}
+function daysBetween(a,b){ return Math.round((b - a)/(1000*60*60*24)); }
+
+function penaltyByRevision(rev){
+  if(rev<=1) return 0;
+  if(rev===2) return 5;
+  if(rev===3) return 10;
+  if(rev>=4) return 15;
+  return 0;
+}
+
+// ---- UI Init ----
+const itemsEl = document.getElementById('items');
+const TOTAL_ITEMS = 27;
+for(let i=1;i<=TOTAL_ITEMS;i++){
+  const row = document.createElement('div');
+  row.className='item';
+  row.innerHTML = `
+    <div class="no">#${i}</div>
+    <div>
+      <div class="muted small">Butir ${i}</div>
+      <input type="text" placeholder="Komentar singkat butir ${i}" class="small comment"/>
+    </div>
+    <input type="range" min="0" max="100" value="0" step="1" class="slider"/>
+    <output class="score">0</output>
+  `;
+  const slider = row.querySelector('.slider');
+  const out = row.querySelector('output');
+  slider.addEventListener('input',()=>{ out.value = slider.value; recalc(); });
+  itemsEl.appendChild(row);
+}
+
+const memberSelect = document.getElementById('memberSelect');
+function refreshMemberSelect(){
+  memberSelect.innerHTML = '';
+  const hideC = document.getElementById('hideConflicts').checked;
+  const hideO = document.getElementById('hideOverload').checked;
+  const maxOverride = document.getElementById('maxProker').value;
+  const cooldownDays = Number(document.getElementById('cooldownDays').value||0);
+  const {start,end} = readProposalInterval();
+  sampleMembers.forEach(m=>{
+    const activeCount = m.assignments.filter(a=> new Date(a.end) >= now).length;
+    const maxAllowed = maxOverride? Number(maxOverride) : (m.max ?? Infinity);
+    const willOverload = activeCount >= maxAllowed;
+    const hasConflict = start && end && m.assignments.some(a=> overlap(start,end,new Date(a.start),new Date(a.end)));
+    // cooldown check: hari antara tugas terakhir yg selesai dengan start
+    const lastEnd = m.assignments.length? new Date(m.assignments.map(a=>a.end).sort().slice(-1)[0]) : null;
+    const violatesCooldown = (start && lastEnd)? (daysBetween(lastEnd,start) < cooldownDays) : false;
+
+    if( (hideC && (hasConflict||violatesCooldown)) || (hideO && willOverload) ){
+      return;
+    }
+    const opt = document.createElement('option');
+    opt.value = m.name;
+    opt.textContent = `${m.name} — aktif:${activeCount}/${maxAllowed}${hasConflict?' • ⚠️ bentrok':''}${violatesCooldown?' • ⏱️ jeda<'+cooldownDays+'h':''}${willOverload?' • 🧨 overload':''}`;
+    memberSelect.appendChild(opt);
+  });
+}
+
+document.getElementById('hideConflicts').addEventListener('change',refreshMemberSelect);
+document.getElementById('hideOverload').addEventListener('change',refreshMemberSelect);
+document.getElementById('maxProker').addEventListener('change',refreshMemberSelect);
+document.getElementById('cooldownDays').addEventListener('input',refreshMemberSelect);
+['startDate','startTime','endDate','endTime'].forEach(id=>document.getElementById(id).addEventListener('change',refreshMemberSelect));
+
+const memberList = document.getElementById('memberList');
+const chosen = [];
+function addSelectedMember(){
+  const name = memberSelect.value;
+  if(!name) return;
+  const m = sampleMembers.find(x=>x.name===name);
+  const {start,end} = readProposalInterval();
+  const maxOverride = document.getElementById('maxProker').value;
+  const cooldown = Number(document.getElementById('cooldownDays').value||0);
+
+  const activeCount = m.assignments.filter(a=> new Date(a.end) >= now).length;
+  const maxAllowed = maxOverride? Number(maxOverride) : (m.max ?? Infinity);
+  const willOverload = activeCount >= maxAllowed;
+  const hasConflict = start && end && m.assignments.some(a=> overlap(start,end,new Date(a.start),new Date(a.end)));
+  const lastEnd = m.assignments.length? new Date(m.assignments.map(a=>a.end).sort().slice(-1)[0]) : null;
+  const violatesCooldown = (start && lastEnd)? (daysBetween(lastEnd,start) < cooldown) : false;
+
+  if((hasConflict || willOverload || violatesCooldown) && !document.getElementById('overrideReason').value){
+    addWarning(`⚠️ Tidak bisa menambahkan ${name}: bentrok/overload/jeda. Isi "Alasan Override" untuk memaksa.`);
+    return;
+  }
+
+  chosen.push({name, role:'Anggota', flags:{hasConflict,willOverload,violatesCooldown}});
+  renderMembers();
+}
+
+function renderMembers(){
+  memberList.innerHTML = '';
+  chosen.forEach((c,idx)=>{
+    const div = document.createElement('div');
+    const flags = [
+      c.flags.hasConflict?'⚠️ Bentrok jadwal':'' ,
+      c.flags.violatesCooldown?'⏱️ Jeda tidak terpenuhi':'' ,
+      c.flags.willOverload?'🧨 Overwork':''
+    ].filter(Boolean).join(' • ');
+    div.className='pill';
+    div.innerHTML = `<strong>${c.name}</strong> <span class="muted small">(${c.role})</span> ${flags?'<span class="tag">'+flags+'</span>':''}
+      <button class="btn" onclick="removeMember(${idx})">Hapus</button>`;
+    memberList.appendChild(div);
+  });
+  recalc();
+}
+function removeMember(i){ chosen.splice(i,1); renderMembers(); }
+
+function readProposalInterval(){
+  const sd = document.getElementById('startDate').value;
+  const st = document.getElementById('startTime').value;
+  const ed = document.getElementById('endDate').value;
+  const et = document.getElementById('endTime').value;
+  const start = parseLocalDate(sd,st);
+  const end = parseLocalDate(ed,et);
+  return {start,end};
+}
+
+function recalc(){
+  // scores
+  const sliders = [...document.querySelectorAll('.slider')];
+  const sum = sliders.reduce((a,s)=> a + Number(s.value||0), 0);
+  const total = sliders.length? (sum / sliders.length) : 0;
+  const revision = Number(document.getElementById('revision').value||1);
+  const penalty = penaltyByRevision(revision);
+  const finalScore = clamp(total - penalty, 0, 100);
+
+  document.getElementById('totalScore').textContent = fmt2(total);
+  document.getElementById('penalty').textContent = penalty;
+  document.getElementById('finalScore').textContent = fmt2(finalScore);
+  const statusEl = document.getElementById('status');
+  if(finalScore >= 70){
+    statusEl.innerHTML = '<span class="ok">Lulus</span>';
+  } else {
+    statusEl.innerHTML = '<span class="danger">Tidak Lulus Sementara</span>';
+    addNotif('Proposal Alert', 'Nilai akhir kurang dari 70. Perlu revisi.');
+  }
+
+  // warnings
+  const warnings = document.getElementById('warnings');
+  warnings.innerHTML = '';
+  const {start,end} = readProposalInterval();
+  const overrideReason = document.getElementById('overrideReason').value.trim();
+  const maxOverride = document.getElementById('maxProker').value;
+  const cooldown = Number(document.getElementById('cooldownDays').value||0);
+  const w = [];
+
+  // schedule & workload checks for chosen members
+  chosen.forEach(c=>{
+    const m = sampleMembers.find(x=>x.name===c.name);
+    const activeCount = m.assignments.filter(a=> new Date(a.end) >= now).length;
+    const maxAllowed = maxOverride? Number(maxOverride) : (m.max ?? Infinity);
+    if(activeCount >= maxAllowed){
+      w.push(`🧨 ${c.name} melampaui batas proker (${activeCount}/${maxAllowed})`);
+      addNotif('Overwork Alert', `${c.name} melebihi batas proker (${activeCount}/${maxAllowed}).`);
+    }
+    const hasConflict = start && end && m.assignments.some(a=> overlap(start,end,new Date(a.start),new Date(a.end)));
+    if(hasConflict){
+      w.push(`⚠️ Bentrok jadwal untuk ${c.name}`);
+      addNotif('Schedule Alert', `Bentrok jadwal untuk ${c.name}.`);
+    }
+    const lastEnd = m.assignments.length? new Date(m.assignments.map(a=>a.end).sort().slice(-1)[0]) : null;
+    const violatesCooldown = (start && lastEnd)? (daysBetween(lastEnd,start) < cooldown) : false;
+    if(violatesCooldown){
+      w.push(`⏱️ Jeda belum terpenuhi untuk ${c.name} (< ${cooldown} hari)`);
+      addNotif('Schedule Alert', `Jeda belum terpenuhi untuk ${c.name}.`);
+    }
+  });
+
+  if((w.length>0) && !overrideReason){
+    w.push('❗ Simpan diblokir: masukkan "Alasan Override" untuk memaksa.');
+  }
+  w.forEach(t=>{
+    const r = document.createElement('div');
+    r.className='warn-row';
+    r.innerHTML = `<span class="icon">⚠️</span><span>${t}</span>`;
+    warnings.appendChild(r);
+  });
+}
+
+function addWarning(text){
+  const warnings = document.getElementById('warnings');
+  const r = document.createElement('div');
+  r.className='warn-row';
+  r.innerHTML = `<span class="icon">⚠️</span><span>${text}</span>`;
+  warnings.appendChild(r);
+}
+
+function addNotif(type,msg){
+  const list = document.getElementById('notifList');
+  const row = document.createElement('div');
+  row.className='pill';
+  row.innerHTML = `<strong>${type}</strong><span class="muted small">${new Date().toLocaleString()}</span><span>${msg}</span>`;
+  list.appendChild(row);
+}
+
+// ---- Calendar (week view) ----
+let weekOffset = 0;
+function shiftWeek(delta){ weekOffset += delta; drawWeek(); }
+function weekStart(d){
+  const t = new Date(d);
+  const day = (t.getDay()+6)%7; // Monday=0
+  t.setDate(t.getDate() - day + weekOffset*7);
+  t.setHours(0,0,0,0);
+  return t;
+}
+function drawWeek(){
+  const head = document.getElementById('calHead');
+  const body = document.getElementById('calBody');
+  head.innerHTML=''; body.innerHTML='';
+  const start = weekStart(new Date());
+  const days = [...Array(7)].map((_,i)=>{ const x = new Date(start); x.setDate(start.getDate()+i); return x; });
+  document.getElementById('weekLabel').textContent = `${days[0].toLocaleDateString()} — ${days[6].toLocaleDateString()}`;
+  days.forEach(d=>{
+    const th = document.createElement('th');
+    th.textContent = d.toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short'});
+    head.appendChild(th);
+  });
+  // Build rows: simple 1 row with events list per day
+  const tr = document.createElement('tr');
+  days.forEach(d=>{
+    const td = document.createElement('td');
+    const allEvents = [];
+    sampleMembers.forEach(m=> m.assignments.forEach(a=> allEvents.push({...a, owner:m.name})) );
+    // Add proposal draft if both start and end provided
+    const {start:startDt,end:endDt} = readProposalInterval();
+    if(startDt && endDt){
+      allEvents.push({ title:'[Draft] '+(document.getElementById('title').value||'Proker Baru'), start:startDt.toISOString(), end:endDt.toISOString(), location: document.getElementById('location').value||'-', owner:'(Usulan)' });
+    }
+    const events = allEvents.filter(e=>{
+      const s = new Date(e.start); const e2 = new Date(e.end);
+      return s.toDateString() === d.toDateString();
+    });
+    events.sort((a,b)=> new Date(a.start)-new Date(b.start));
+    events.forEach(e=>{
+      const div = document.createElement('span');
+      div.className='event small';
+      const s = new Date(e.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      const en = new Date(e.end).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      div.textContent = `${s}-${en} • ${e.title} • ${e.owner}`;
+      td.appendChild(div);
+    });
+    tr.appendChild(td);
+  });
+  body.appendChild(tr);
+}
+
+function init(){
+  refreshMemberSelect();
+  drawWeek();
+  recalc();
+}
+init();
+</script>
+</body>
+</html>

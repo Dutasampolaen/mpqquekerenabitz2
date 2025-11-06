@@ -1,0 +1,88 @@
+// Prisma schema (sinkron dengan db/schema.sql ringkas, simplified)
+generator client { provider = "prisma-client-js" }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Member {
+  id          BigInt   @id @default(autoincrement())
+  name        String   @unique
+  org_unit    String?
+  total_done  Int      @default(0)
+  last_comment String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  proposals   ProposalMember[]
+}
+
+model Proposal {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  division    String?
+  uploader    String?
+  start_dt    DateTime?
+  end_dt      DateTime?
+  location    String?
+  link        String?
+  file_path   String?
+  status      String   @default("SUBMITTED")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  members     ProposalMember[]
+  evaluations Evaluation[]
+}
+
+model ProposalMember {
+  id              BigInt  @id @default(autoincrement())
+  proposal_id     String  @db.Uuid
+  member_id       BigInt
+  role            String  @default("Anggota")
+  committee_field String?
+  override_reason String?
+  created_at      DateTime @default(now())
+
+  proposal Proposal @relation(fields: [proposal_id], references: [id], onDelete: Cascade)
+  member   Member   @relation(fields: [member_id], references: [id], onDelete: Restrict)
+
+  @@unique([proposal_id, member_id])
+}
+
+model Evaluation {
+  id          BigInt  @id @default(autoincrement())
+  proposal_id String  @db.Uuid
+  revision    Int
+  evaluator   String
+  total       Decimal @db.Decimal(5,2)
+  penalty     Int     @default(0)
+  final       Decimal @db.Decimal(5,2)
+  notes       String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+
+  proposal Proposal @relation(fields: [proposal_id], references: [id], onDelete: Cascade)
+  items    EvaluationItem[]
+
+  @@unique([proposal_id, revision])
+}
+
+model EvaluationItem {
+  id             BigInt  @id @default(autoincrement())
+  evaluation_id  BigInt
+  item_no        Int
+  score          Int
+  comment        String?
+  evaluation     Evaluation @relation(fields: [evaluation_id], references: [id], onDelete: Cascade)
+
+  @@unique([evaluation_id, item_no])
+}
+
+model Notification {
+  id          BigInt  @id @default(autoincrement())
+  type        String
+  message     String
+  proposal_id String? @db.Uuid
+  member_id   BigInt?
+  created_at  DateTime @default(now())
+  read_at     DateTime?
+}

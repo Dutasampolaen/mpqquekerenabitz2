@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MPK — Bulk Input Nama + Bidang (Calon Panitia)</title>
+<style>
+  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--muted:#94a3b8;--text:#e5e7eb;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0a1222);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+  header{padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,18,34,0.9);backdrop-filter:blur(10px)}
+  h1{margin:0;font-size:18px}
+  main{padding:18px;display:grid;gap:16px;grid-template-columns: 1.1fr 0.9fr}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .small{font-size:12px} .muted{color:var(--muted)}
+  .row{display:grid;grid-template-columns: 160px 1fr;gap:10px;align-items:center;margin:6px 0}
+  textarea,input,select{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px;font-size:14px}
+  .btn{background:#0b1220;border:1px solid var(--line);padding:8px 12px;border-radius:8px;color:var(--text);cursor:pointer}
+  .btn.primary{border-color:#14532d;background:#0b2a18}
+  .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tag{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+  .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+  .sticky{position:sticky;bottom:0;background:rgba(17,24,39,0.9);border-top:1px solid var(--line);backdrop-filter:blur(6px);padding:8px;display:flex;justify-content:flex-end;gap:8px}
+  .grid{display:grid;gap:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="flex" style="justify-content:space-between">
+    <h1>Bulk Input Nama + Bidang — Calon Panitia</h1>
+    <span class="tag">Demo UI — Prototipe</span>
+  </div>
+  <div class="muted small">Tempel banyak data sekaligus (Nama, opsional NIM, Role, dan <strong>Bidang</strong>) → parse → dedupe → mapping → simpan sebagai calon panitia per proposal.</div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="row"><label>Proposal</label>
+      <select id="proposalPick"></select>
+    </div>
+    <div class="row"><label>Input Massal</label>
+      <textarea id="bulk" rows="10" placeholder="Contoh:\nAlya, Acara\nBima, 2108765, Humas\n2109990, Citra, Dokumentasi\nDani | Bendahara | Konsumsi\nEka; 2101234; Sekretaris; Perlengkapan"></textarea>
+    </div>
+    <div class="row"><label>Format</label>
+      <div class="flex small muted">
+        <span>Delimiter: baris baru / koma / titik koma / pipa (|) / tab • Urutan fleksibel • Deteksi bidang otomatis dari kata kunci</span>
+      </div>
+    </div>
+    <div class="row"><label>Opsi Mapping</label>
+      <div class="flex small">
+        <label><input id="preferId" type="checkbox" checked/> Prioritaskan NIM bila ada</label>
+        <label><input id="autoRole" type="checkbox" checked/> Default role = Anggota</label>
+        <label><input id="createMissing" type="checkbox" checked/> Buat member baru bila belum ada</label>
+      </div>
+    </div>
+    <div class="flex">
+      <button class="btn" onclick="parseBulk()">Parse</button>
+      <span id="parseStats" class="small muted"></span>
+    </div>
+    <div id="previewBox" class="card" style="margin-top:10px">
+      <strong>Pratinjau</strong>
+      <div class="small muted">Edit kolom bila perlu sebelum simpan.</div>
+      <div style="overflow:auto;max-height:340px;margin-top:8px">
+        <table id="preview"><thead></thead><tbody></tbody></table>
+      </div>
+      <div class="sticky">
+        <button class="btn primary" onclick="saveCandidates()">Tambahkan ke Daftar Calon</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="card">
+    <strong>Daftar Calon Panitia (Proposal)</strong>
+    <div id="candidates" style="margin-top:8px"></div>
+    <div class="grid" style="margin-top:12px">
+      <strong class="small muted">Catatan</strong>
+      <ul class="small muted">
+        <li><b>Bidang</b> contoh: Acara, Humas, Dokumentasi, Perlengkapan, Konsumsi, Keamanan, Sponsorship, Logistik.</li>
+        <li>Status: <span class="ok">Ada</span> = ditemukan di DB, <span class="warn">Duplikat</span> = ganda pada input, <span class="danger">Baru</span> = akan dibuat.</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<script>
+// ----- Data simulasi DB -----
+let proposals = [
+  {id:'p1', title:'Seminar Kepemimpinan'},
+  {id:'p2', title:'Pelatihan Debate'},
+  {id:'p3', title:'Festival Kampus'},
+];
+let members = [
+  {id:'m1', name:'Alya', nim:'2108765'},
+  {id:'m2', name:'Bima', nim:'2104321'},
+  {id:'m3', name:'Citra', nim:'2109990'},
+  {id:'m4', name:'Eka',  nim:'2101234'},
+];
+let proposalCandidates = {}; // proposalId -> array {name,nim,role,bidang,memberId?}
+
+const BIDANG_LIST = ['Acara','Humas','Dokumentasi','Perlengkapan','Konsumsi','Keamanan','Sponsorship','Logistik'];
+function guessBidang(token){
+  const t = token.toLowerCase();
+  if(/acara/.test(t)) return 'Acara';
+  if(/humas|publikasi|public/.test(t)) return 'Humas';
+  if(/dokumentasi|doku|media|photo|foto|vid/.test(t)) return 'Dokumentasi';
+  if(/perlengkapan|perl/.test(t)) return 'Perlengkapan';
+  if(/konsumsi|kons|makan|catering/.test(t)) return 'Konsumsi';
+  if(/keamanan|security|satpam/.test(t)) return 'Keamanan';
+  if(/sponsor|sponsorship|dan[a]?/.test(t)) return 'Sponsorship';
+  if(/logistik|logis/.test(t)) return 'Logistik';
+  return '';
+}
+
+function init(){
+  const pick = document.getElementById('proposalPick');
+  proposals.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.title;
+    pick.appendChild(opt);
+  });
+  renderCandidates();
+}
+function norm(s){
+  return (s||'').toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+function parseLine(line){
+  // Split by common delimiters: comma, semicolon, pipe, tab
+  const parts = line.split(/[,\|\t;]+/).map(s=>s.trim()).filter(Boolean);
+  let name='', nim='', role='Anggota', bidang='';
+  // Identify bidang tokens
+  parts.forEach(p=>{ const g = guessBidang(p); if(g && !bidang) bidang=g; });
+
+  // Heuristik: NIM angka 6-12 digit
+  const ids = parts.filter(p=>/^\d{6,12}$/.test(p));
+  if(ids.length) nim = ids[0];
+
+  // Role dasar
+  const roleToken = parts.find(p=> /^(ketua|sekretaris|bendahara|anggota|koor|koordinator)$/i.test(p));
+  if(roleToken) role = roleToken;
+
+  // Nama: ambil token non-nim, non-role, non-bidang pertama
+  parts.forEach(p=>{
+    if(p===roleToken) return;
+    if(/^\d{6,12}$/.test(p)) return;
+    if(guessBidang(p)) return;
+    if(!name) name=p; else name = name + ' ' + p;
+  });
+
+  return {name, nim, role: role || 'Anggota', bidang: bidang || ''};
+}
+
+let parsedRows = [];
+
+function parseBulk(){
+  const text = document.getElementById('bulk').value;
+  const preferId = document.getElementById('preferId').checked;
+  const createMissing = document.getElementById('createMissing').checked;
+  const rows = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(parseLine);
+
+  // Dedup in-input (by nim or normalized name)
+  const seen = new Set();
+  rows.forEach(r=>{
+    const key = r.nim? 'id:'+r.nim : 'nm:'+norm(r.name);
+    r._dup = seen.has(key); seen.add(key);
+  });
+
+  // Match to DB
+  rows.forEach(r=>{
+    let match = null;
+    if(preferId && r.nim){ match = members.find(m=> m.nim === r.nim); }
+    if(!match && r.name){
+      const n = norm(r.name);
+      match = members.find(m=> norm(m.name) === n);
+      if(!match){
+        match = members.find(m=> norm(m.name).includes(n) || n.includes(norm(m.name)));
+      }
+    }
+    if(match){
+      r.memberId = match.id;
+      r.name = r.name || match.name;
+      r.nim = r.nim || match.nim;
+      r._status = r._dup? 'Duplikat' : 'Ada';
+    } else {
+      r._status = r._dup? 'Duplikat' : (createMissing? 'Baru' : 'Tidak ditemukan');
+    }
+  });
+
+  renderPreview(rows);
+}
+
+function renderPreview(rows){
+  parsedRows = rows;
+  const thead = document.querySelector('#preview thead');
+  const tbody = document.querySelector('#preview tbody');
+  thead.innerHTML = `<tr><th>#</th><th>Nama</th><th>NIM</th><th>Role</th><th>Bidang</th><th>Status</th></tr>`;
+  tbody.innerHTML = '';
+  rows.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    const bidangOptions = BIDANG_LIST.map(b=> `<option ${r.bidang===b?'selected':''}>${b}</option>`).join('');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td contenteditable="true" oninput="editCell(${i},'name',this.textContent)">${r.name||''}</td>
+      <td contenteditable="true" oninput="editCell(${i},'nim',this.textContent)">${r.nim||''}</td>
+      <td>
+        <select onchange="editCell(${i},'role',this.value)">
+          <option ${r.role==='Anggota'?'selected':''}>Anggota</option>
+          <option ${r.role==='Ketua'?'selected':''}>Ketua</option>
+          <option ${r.role==='Sekretaris'?'selected':''}>Sekretaris</option>
+          <option ${r.role==='Bendahara'?'selected':''}>Bendahara</option>
+          <option ${/koor/i.test(r.role)?'selected':''}>Koor</option>
+        </select>
+      </td>
+      <td>
+        <select onchange="editCell(${i},'bidang',this.value)">
+          <option value="" ${!r.bidang?'selected':''}>(Pilih)</option>
+          ${bidangOptions}
+        </select>
+      </td>
+      <td>
+        ${r._status==='Ada'?'<span class="ok">Ada</span>': r._status==='Baru'?'<span class="danger">Baru</span>':
+          r._status==='Duplikat'?'<span class="warn">Duplikat</span>' : '<span class="warn">Tidak ditemukan</span>'}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('parseStats').textContent = `Baris: ${rows.length} • Ada: ${rows.filter(r=>r._status==='Ada').length} • Baru: ${rows.filter(r=>r._status==='Baru').length} • Duplikat: ${rows.filter(r=>r._status==='Duplikat').length}`;
+}
+
+function editCell(i, key, val){
+  parsedRows[i][key] = (val||'').trim();
+}
+
+function saveCandidates(){
+  if(parsedRows.length===0){ alert('Tidak ada data.'); return; }
+  const pid = document.getElementById('proposalPick').value || proposals[0].id;
+  if(!proposalCandidates[pid]) proposalCandidates[pid] = [];
+  parsedRows.forEach(r=>{
+    if(r._status==='Duplikat') return; // skip duplicates
+    if(r._status==='Baru'){
+      const id = 'm' + (members.length+1);
+      members.push({id, name:r.name, nim:r.nim||''});
+      r.memberId = id;
+    }
+    proposalCandidates[pid].push({
+      memberId:r.memberId, name:r.name, nim:r.nim||'',
+      role:r.role||'Anggota', bidang:r.bidang||''
+    });
+  });
+  alert(`Tersimpan: ${parsedRows.filter(r=>r._status!=='Duplikat').length} entri ke daftar calon (dengan Bidang).`);
+  parsedRows = [];
+  document.getElementById('bulk').value='';
+  document.querySelector('#preview thead').innerHTML='';
+  document.querySelector('#preview tbody').innerHTML='';
+  document.getElementById('parseStats').textContent='';
+  renderCandidates();
+}
+
+function renderCandidates(){
+  const pid = document.getElementById('proposalPick').value || proposals[0].id;
+  const box = document.getElementById('candidates');
+  box.innerHTML = '';
+  const list = proposalCandidates[pid] || [];
+  if(list.length===0){
+    box.innerHTML = '<div class="muted small">Belum ada calon. Tambahkan via input massal di kiri.</div>';
+    return;
+  }
+  list.forEach((c,idx)=>{
+    const div = document.createElement('div');
+    div.className = 'pill';
+    div.innerHTML = `<strong>${c.name}</strong><span class="muted small">${c.nim||'-'}</span><span class="tag">${c.role}</span><span class="tag">${c.bidang||'-'}</span>
+      <button class="btn" onclick="delCandidate(${idx})">Hapus</button>`;
+    box.appendChild(div);
+  });
+}
+function delCandidate(i){
+  const pid = document.getElementById('proposalPick').value || proposals[0].id;
+  proposalCandidates[pid].splice(i,1);
+  renderCandidates();
+}
+
+document.getElementById('proposalPick')?.addEventListener('change',renderCandidates);
+init();
+</script>
+</body>
+</html>
